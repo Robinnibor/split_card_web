@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<button onclick="getCards()">Get Cards</button>
+
+<script>
+async function getCards() {
+  const response = await fetch('http://localhost:5000/get_cards', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      'image_path': 'path_to_your_image'
+    })
+  });
+  const data = await response.json();
+  console.log(data);
+}
+</script>
+
+</body>
+</html>

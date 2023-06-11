@@ -125,3 +125,17 @@ def find_card_positions(image):
     non_blank_cards = filter_blank_cards(image, cards, blank_card, estimated_card_height, estimated_card_width)
 
     return non_blank_cards
+
+# Draw the bounding rectangles
+#for title in titles:
+#    x, y, w, h = cv2.boundingRect(title)
+#    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+#for card in non_blank_cards:
+#    x, y, w, h = card
+#    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+
+# Show the image with detected titles and cards
+#cv2.imwrite('splited.png', image)
+#cv2.imshow('Detected Titles and Cards', image)
+#cv2.waitKey(0)
+#cv2.destroyAllWindows()
