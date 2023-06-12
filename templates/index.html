@@ -6,13 +6,13 @@
 
 <script>
 async function getCards() {
-  const response = await fetch('http://localhost:5000/get_cards', {
+  const response = await fetch('http://127.0.0.1:5000/get_cards', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      'image_path': 'path_to_your_image'
+      'image_path': 'test14.png'
     })
   });
   const data = await response.json();
