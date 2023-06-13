@@ -18,7 +18,7 @@ export default function CardAnalyzer(props: NyckelToken) {
   const [originalCardCoords, setOriginalCardCoords] = useState([]);
   const [scaledCardCoords, setScaledCardCoords] = useState([]);
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1);
-  const [cardNum, setCardNum] = useState('');
+  const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string }[]>([]);
 
   async function getCard(path: string): Promise<void> {
     try {
@@ -82,10 +82,10 @@ export default function CardAnalyzer(props: NyckelToken) {
     // Get the data URL of the cropped image
     return croppedCanvas.toDataURL();
   }
-  async function searchCard(data: string): Promise<string | undefined> {
+  async function searchCard(data: string): Promise<{ distance: number; externalId: string; }[] | undefined> {
     try {
-      const res = await axios.post(
-        process.env.NEXT_PUBLIC_NYCKEL_URL + '/v0.9/functions/sw3j7knfy7fqfko1/search',
+      const res = await axios.post<{ searchSamples: { distance: number; externalId: string }[] }>(
+        process.env.NEXT_PUBLIC_NYCKEL_URL + '/v0.9/functions/sw3j7knfy7fqfko1/search?sampleCount=10',
           { data },
           {
             headers: {
@@ -94,13 +94,11 @@ export default function CardAnalyzer(props: NyckelToken) {
             },
         }
       )
-      const card = res.data.searchSamples[0];
+      // TEST: see the most similar samples
+      console.log('search results:', res.data.searchSamples);
+      const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.03);
 
-      if (card.distance < 0.1 && card.externalId) {
-        return card.externalId;
-      }
-
-      return undefined;
+      return cards;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error('Search card failed.', error);
@@ -131,6 +129,21 @@ export default function CardAnalyzer(props: NyckelToken) {
       }
     }
   }
+  async function deleteCard(externalId: string): Promise<void> {
+    try {
+      await axios.delete(
+        process.env.NEXT_PUBLIC_NYCKEL_URL +
+        '/v1/functions/sw3j7knfy7fqfko1/samples?externalId=' +
+        externalId,
+      )
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Create card failed.', error);
+      } else {
+        console.error('Error creating card:', error);
+      }
+    }
+  }
 
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = () => {
     const file = fileEl.current?.files?.[0];
@@ -142,23 +155,34 @@ export default function CardAnalyzer(props: NyckelToken) {
   const handleMapClick: React.MouseEventHandler<HTMLMapElement> = async (e) => {
     const coord = scaledCardCoords[+(e.target as HTMLAreaElement).dataset.index!];
     const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
-    const externalId = await searchCard(dataUrl);
+    const cards = await searchCard(dataUrl);
 
     setSelectedCardIndex(+(e.target as HTMLAreaElement).dataset.index!);
 
-    if (externalId) {
-      setCardNum(externalId);
-    } else {
-      setCardNum('');
+    if (cards) {
+      setFilteredSearchResults(cards);
     }
   }
-  const handleBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
+  const handleCreateBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
     const coord = scaledCardCoords[selectedCardIndex];
     const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
-    const json = await createCard(dataUrl, (document.getElementById('number') as HTMLInputElement).value);
-    const externalId = await searchCard(json.data);
+    const json = await createCard(dataUrl, (document.getElementById('create') as HTMLInputElement).value);
+    const cards = await searchCard(json.data);
 
-    setCardNum(externalId!);
+    if (cards) {
+      setFilteredSearchResults(cards);
+    }
+  }
+  const handleUpdateBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
+    const coord = scaledCardCoords[selectedCardIndex];
+    await deleteCard(filteredSearchResults[0].externalId);
+    const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
+    const json = await createCard(dataUrl, (document.getElementById('update') as HTMLInputElement).value);
+    const cards = await searchCard(json.data);
+
+    if (cards) {
+      setFilteredSearchResults(cards);
+    }
   }
 
   return (
@@ -180,12 +204,37 @@ export default function CardAnalyzer(props: NyckelToken) {
             alt="card"
           />)}
         </map>
-        <Image ref={imageEl} useMap="#cards" src={imageSrc} width={deck.width} height={deck.height} alt="preview" />
-        {cardNum && <div>Card No. {cardNum}</div>}
-        {!cardNum && selectedCardIndex !== -1 && <div>
-          <label htmlFor="number">Card No:</label>
-          <input type="number" id="number" name="number" required />
-          <button onClick={handleBtnClick}>Submit</button>
+        <div className="relative">
+          <Image ref={imageEl} useMap="#cards" src={imageSrc} width={deck.width} height={deck.height} alt="deck" />
+          <div className={`absolute border-2 border-[#00ff00]`} style={{ display: selectedCardIndex === -1 ? 'none' : 'block', left: originalCardCoords[selectedCardIndex]?.[0], top: originalCardCoords[selectedCardIndex]?.[1], width: originalCardCoords[0][2], height: originalCardCoords[0][3] }} />
+        </div>
+        {filteredSearchResults.length !== 0 && <div>
+          <div>
+            <label htmlFor="update">Card No:</label>
+            <input type="number" id="update" name="update" required />
+            <button onClick={handleUpdateBtnClick}>Update</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Distance</th>
+                <th>Card</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSearchResults.map((result) => 
+                <tr key={result.externalId}>
+                  <td>{result.distance}</td>
+                  <td><Image src={`https://salix5.github.io/query-data/pics/${(+result.externalId!).toString()}.jpg`} width={322} height={470} alt="actual card" /></td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>}
+        {filteredSearchResults.length === 0 && selectedCardIndex !== -1 && <div>
+          <label htmlFor="create">Card No:</label>
+          <input type="number" id="create" name="create" required />
+          <button onClick={handleCreateBtnClick}>Create</button>
         </div>}
       </div>}
     </main>
