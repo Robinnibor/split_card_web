@@ -5,11 +5,6 @@ import axios from 'axios'
 import Image from 'next/image'
 import type { NyckelToken } from '@/lib/accessToken';
 
-const deck = {
-  width: 448,
-  height: 640,
-}
-
 export default function CardAnalyzer(props: NyckelToken) {
   const fileEl = useRef<HTMLInputElement>(null);
   const imageEl = useRef<HTMLImageElement>(null);
@@ -62,11 +57,11 @@ export default function CardAnalyzer(props: NyckelToken) {
     const cropHeight = h;
 
     // Set the dimensions of the temporary canvas to accommodate the doubled size
-    canvas.width = deck.width * scaleFactor;
-    canvas.height = deck.height * scaleFactor;
+    canvas.width = image.width * scaleFactor;
+    canvas.height = image.height * scaleFactor;
 
     // Draw the original image onto the temporary canvas, doubling its size
-    ctx.drawImage(image, 0, 0, deck.width * scaleFactor, deck.height * scaleFactor);
+    ctx.drawImage(image, 0, 0, image.width * scaleFactor, image.height * scaleFactor);
 
     // Create a new canvas to store the cropped image
     const croppedCanvas = document.createElement('canvas');
@@ -205,7 +200,7 @@ export default function CardAnalyzer(props: NyckelToken) {
           />)}
         </map>
         <div className="relative">
-          <Image ref={imageEl} useMap="#cards" src={imageSrc} width={deck.width} height={deck.height} alt="deck" />
+          <Image ref={imageEl} useMap="#cards" src={imageSrc} width={0} height={0} style={{ width: 'auto' }} alt="deck" />
           <div className={`absolute border-2 border-[#00ff00]`} style={{ display: selectedCardIndex === -1 ? 'none' : 'block', left: originalCardCoords[selectedCardIndex]?.[0], top: originalCardCoords[selectedCardIndex]?.[1], width: originalCardCoords[0][2], height: originalCardCoords[0][3] }} />
         </div>
         {filteredSearchResults.length !== 0 && <div>
