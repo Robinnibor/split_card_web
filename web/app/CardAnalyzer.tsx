@@ -18,7 +18,7 @@ export default function CardAnalyzer(props: NyckelToken) {
   const [originalCardCoords, setOriginalCardCoords] = useState([]);
   const [scaledCardCoords, setScaledCardCoords] = useState([]);
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1);
-  const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string }[]>([]);
+  const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string; data: string }[]>([]);
 
   async function getCard(path: string): Promise<void> {
     try {
@@ -82,10 +82,10 @@ export default function CardAnalyzer(props: NyckelToken) {
     // Get the data URL of the cropped image
     return croppedCanvas.toDataURL();
   }
-  async function searchCard(data: string): Promise<{ distance: number; externalId: string; }[] | undefined> {
+  async function searchCard(data: string): Promise<{ distance: number; externalId: string; data: string }[] | undefined> {
     try {
-      const res = await axios.post<{ searchSamples: { distance: number; externalId: string }[] }>(
-        process.env.NEXT_PUBLIC_NYCKEL_URL + '/v0.9/functions/sw3j7knfy7fqfko1/search?sampleCount=10',
+      const res = await axios.post<{ searchSamples: { distance: number; externalId: string; data: string }[] }>(
+        process.env.NEXT_PUBLIC_NYCKEL_URL + '/v0.9/functions/sw3j7knfy7fqfko1/search?sampleCount=10&includeData=true',
           { data },
           {
             headers: {
@@ -218,14 +218,16 @@ export default function CardAnalyzer(props: NyckelToken) {
             <thead>
               <tr>
                 <th>Distance</th>
-                <th>Card</th>
+                <th>Data</th>
+                <th>Actual</th>
               </tr>
             </thead>
             <tbody>
               {filteredSearchResults.map((result) => 
                 <tr key={result.externalId}>
                   <td>{result.distance}</td>
-                  <td><Image src={`https://salix5.github.io/query-data/pics/${(+result.externalId!).toString()}.jpg`} width={322} height={470} alt="actual card" /></td>
+                  <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
+                  <td><Image src={`https://salix5.github.io/query-data/pics/${(+result.externalId!).toString()}.jpg`} width={322} height={470} alt="actual" /></td>
                 </tr>
               )}
             </tbody>
