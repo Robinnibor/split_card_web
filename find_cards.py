@@ -18,17 +18,29 @@ def find_titles(image):
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
     # Use Canny edge detection with lowered thresholds
-    edges = cv2.Canny(blur, 300, 500)
+    edges = cv2.Canny(blur, 250, 400)
 
     # Find contours
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+
+
     # Filter contours based on size
-    titles = [cnt for cnt in contours if cv2.boundingRect(cnt)[2] > min_width]
-
-    # Sort titles from top to bottom
+    titles = [cnt for cnt in contours if cv2.boundingRect(cnt)[2] > min_width and cv2.boundingRect(cnt)[3]*100 > cv2.boundingRect(cnt)[2]]
     titles.sort(key=lambda cnt: cv2.boundingRect(cnt)[1])
+    # print('num of titles = ', len(titles))
+    # for t in titles: print(cv2.boundingRect(t))
+    # for title in titles:
+    #     x, y, w, h = cv2.boundingRect(title)
+    #     cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    # cv2.imwrite('splited.png', image)
+    # cv2.imshow('Detected Titles and Cards', image)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+    # Load the template image
+    # Sort titles from top to bottom
 
+    # for t in titles: print(t)
     return titles
 
 
@@ -112,8 +124,15 @@ def find_card_positions(image):
     estimated_card_height = int(estimated_card_width * template_ratio)
     # Find titles
     titles = find_titles(image)
-
-    # Find the cards
+    """
+    for title in titles:
+        x, y, w, h = cv2.boundingRect(title)
+        cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    cv2.imwrite('splited.png', image)
+    cv2.imshow('Detected Titles and Cards', image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    """
     num_cards_per_row = 10  # Number of cards per row
     cards = find_cards(image, titles, num_cards_per_row, estimated_card_height, estimated_card_width)
 
@@ -123,8 +142,29 @@ def find_card_positions(image):
 
     # Filter blank cards
     non_blank_cards = filter_blank_cards(image, cards, blank_card, estimated_card_height, estimated_card_width)
-
+    """
+    for card in non_blank_cards:
+       x, y, w, h = card
+       cv2.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+    
+    cv2.imwrite('splited.png', image)
+    cv2.imshow('Detected Titles and Cards', image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+"""
     return non_blank_cards
+
+
+def test_find_card_positions(file_name, scale_factor =2):
+    image = cv2.imread(file_name)
+    image = cv2.resize(image, (image.shape[1] * scale_factor, image.shape[0] * scale_factor))
+    scaled_cards = find_card_positions(image)
+    original_cards = [(x // scale_factor, y // scale_factor, w // scale_factor, h // scale_factor) for (x, y, w, h) in
+                      scaled_cards]
+    # find_card_positions(image)
+
+
+
 
 # Draw the bounding rectangles
 #for title in titles:
