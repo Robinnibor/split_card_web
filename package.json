@@ -1,7 +1,13 @@
 {
+  "name": "myapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "heroku-prebuild": "cd web && npm install",
-    "heroku-postbuild": "cd web && npm run build",
-    "start": "cd web && npm start"
-  }
+    "start": "npm --prefix node_files start",
+    "heroku-postbuild": "npm --prefix node_files install && npm --prefix node_files run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
