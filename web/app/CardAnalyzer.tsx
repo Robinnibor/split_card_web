@@ -17,7 +17,7 @@ export default function CardAnalyzer(props: NyckelToken) {
 
   async function getCard(path: string): Promise<void> {
     try {
-      const { data } = await axios.post(process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_URL + '/get_cards', { image_path: path })
+      const { data } = await axios.post('https://split-card-backend-5b01e3005801.herokuapp.com/get_cards', { image_path: path })
       
       setScaleFactor(data.scale_factor);
       setOriginalCardCoords(data.original_cards);
@@ -35,7 +35,7 @@ export default function CardAnalyzer(props: NyckelToken) {
     formData.append('image', file);
     setImageSrc(URL.createObjectURL(file));
     try {
-      const { data } = await axios.post(process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_URL + '/upload_image', formData);
+      const { data } = await axios.post('https://split-card-backend-5b01e3005801.herokuapp.com/upload_image', formData);
   
       await getCard(data.image_path);
     } catch (error) {
@@ -80,7 +80,7 @@ export default function CardAnalyzer(props: NyckelToken) {
   async function searchCard(data: string): Promise<{ distance: number; externalId: string; data: string }[] | undefined> {
     try {
       const res = await axios.post<{ searchSamples: { distance: number; externalId: string; data: string }[] }>(
-        process.env.NEXT_PUBLIC_NYCKEL_URL + '/v0.9/functions/sw3j7knfy7fqfko1/search?sampleCount=10&includeData=true',
+        'https://www.nyckel.com/v0.9/functions/sw3j7knfy7fqfko1/search?sampleCount=10&includeData=true',
           { data },
           {
             headers: {
@@ -105,7 +105,7 @@ export default function CardAnalyzer(props: NyckelToken) {
   async function createCard(data: string, externalId: string): Promise<any> {
     try {
       const res = await axios.post(
-        process.env.NEXT_PUBLIC_NYCKEL_URL + '/v1/functions/sw3j7knfy7fqfko1/samples',
+        'https://www.nyckel.com/v1/functions/sw3j7knfy7fqfko1/samples',
           { data, externalId },
           {
             headers: {
@@ -127,9 +127,8 @@ export default function CardAnalyzer(props: NyckelToken) {
   async function deleteCard(externalId: string): Promise<void> {
     try {
       await axios.delete(
-        process.env.NEXT_PUBLIC_NYCKEL_URL +
-        '/v1/functions/sw3j7knfy7fqfko1/samples?externalId=' +
-        externalId,
+        'https://www.nyckel.com/v1/functions/sw3j7knfy7fqfko1/samples?externalId=' +
+        externalId
       )
     } catch (error) {
       if (axios.isAxiosError(error)) {
