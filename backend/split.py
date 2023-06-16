@@ -3,8 +3,10 @@ from datetime import datetime
 from flask import Flask, request, jsonify, render_template
 import cv2
 from find_cards import find_card_positions
+from flask_cors import CORS
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 @app.route('/get_cards', methods=['POST'])
