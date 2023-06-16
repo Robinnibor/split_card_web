@@ -13,7 +13,7 @@ const port = process.env.PORT || '5000';
 const completeUrl = new URL(serverUrl);
 completeUrl.port = port;
   const formData = await req.formData()
-  const { data } = await axios.post(completeUrl.toString() + '/upload_image', formData)
+  const { data } = await axios.post(completeUrl.toString() + 'upload_image', formData)
 
   return NextResponse.json(data)
 }
