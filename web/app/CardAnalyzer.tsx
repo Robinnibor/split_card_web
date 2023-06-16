@@ -40,7 +40,7 @@ export default function CardAnalyzer(props: NyckelToken) {
       await getCard(data.image_path);
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('Get card failed.', error);
+        console.error('Upload image failed.', error);
       } else {
         console.error('Error uploading image:', error);
       }
