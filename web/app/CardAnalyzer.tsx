@@ -17,7 +17,7 @@ export default function CardAnalyzer(props: NyckelToken) {
 
   async function getCard(path: string): Promise<void> {
     try {
-      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_ORIGIN}:${process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_PORT || 80}/get_cards`, { image_path: path })
+      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_ORIGIN}${process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_PORT ? ':' + process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_PORT : ':80'}/get_cards`, { image_path: path })
       
       setScaleFactor(data.scale_factor);
       setOriginalCardCoords(data.original_cards);
@@ -35,7 +35,7 @@ export default function CardAnalyzer(props: NyckelToken) {
     formData.append('image', file);
     setImageSrc(URL.createObjectURL(file));
     try {
-      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_ORIGIN}:${process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_PORT || 80}/upload_image`, formData);
+      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_ORIGIN}${process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_PORT ? ':' + process.env.NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_PORT : ':80'}/upload_image`, formData);
   
       await getCard(data.image_path);
     } catch (error) {
