@@ -5,7 +5,8 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 First, create `.env.local` and add following environment variables
 
 ```
-IMAGE_PROCESSING_SERVER_URL=http://127.0.0.1:5000
+NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_ORIGIN=http://127.0.0.1
+NEXT_PUBLIC_IMAGE_PROCESSING_SERVER_PORT:5000
 NEXT_PUBLIC_NYCKEL_URL=https://www.nyckel.com
 NYCKEL_CLIENT_ID=NYCKEL_CLIENT_ID
 NYCKEL_CLIENT_SECRET=NYCKEL_CLIENT_SECRET
