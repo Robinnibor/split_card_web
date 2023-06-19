@@ -5,7 +5,7 @@ import axios from 'axios'
 import Image from 'next/image'
 import type { NyckelToken } from '@/lib/accessToken';
 
-export default function CardAnalyzer(props: { token: NyckelToken, urls: Record<string, string> }) {
+export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel: string; imageProcessingServer: string } }) {
   const fileEl = useRef<HTMLInputElement>(null);
   const imageEl = useRef<HTMLImageElement>(null);
   const [imageSrc, setImageSrc] = useState('');
