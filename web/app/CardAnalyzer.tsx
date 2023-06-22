@@ -174,6 +174,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   }
   const handleUpdateBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
     const coord = scaledCardCoords[selectedCardIndex];
+    await deleteCard(filteredSearchResults[0].externalId);
     const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
     const json = await createCard(dataUrl, (document.getElementById('update') as HTMLInputElement).value);
     const cards = await searchCard(json.data);
