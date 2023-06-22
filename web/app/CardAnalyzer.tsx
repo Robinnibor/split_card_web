@@ -128,13 +128,18 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
     try {
       await axios.delete(
         props.urls.nyckel + '/v1/functions/sw3j7knfy7fqfko1/samples?externalId=' +
-        externalId
+        externalId,
+        {
+          headers: {
+            'Authorization': `${props.token.token_type} ${props.token.access_token}`,
+          },
+        }
       )
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('Create card failed.', error);
+        console.error('Delete card failed.', error);
       } else {
-        console.error('Error creating card:', error);
+        console.error('Error deleting card:', error);
       }
     }
   }
@@ -169,7 +174,6 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   }
   const handleUpdateBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
     const coord = scaledCardCoords[selectedCardIndex];
-    await deleteCard(filteredSearchResults[0].externalId);
     const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
     const json = await createCard(dataUrl, (document.getElementById('update') as HTMLInputElement).value);
     const cards = await searchCard(json.data);
