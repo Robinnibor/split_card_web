@@ -118,7 +118,12 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       return res.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('Create card failed.', error);
+        // sample with the same externalId already exists
+        if (error.response?.status === 409) {
+          await createCard(data, `${externalId}-${Math.floor(Date.now() / 1000)}`);
+        } else {
+          console.error('Create card failed.', error);
+        }
       } else {
         console.error('Error creating card:', error);
       }
