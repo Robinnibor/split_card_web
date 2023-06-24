@@ -13,7 +13,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   const [originalCardCoords, setOriginalCardCoords] = useState([]);
   const [scaledCardCoords, setScaledCardCoords] = useState([]);
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1);
-  const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string; data: string }[]>([]);
+  const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string; data: string; sampleId: string }[]>([]);
 
   async function getCard(path: string): Promise<void> {
     try {
@@ -77,9 +77,9 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
     // Get the data URL of the cropped image
     return croppedCanvas.toDataURL();
   }
-  async function searchCard(data: string): Promise<{ distance: number; externalId: string; data: string }[] | undefined> {
+  async function searchCard(data: string): Promise<{ distance: number; externalId: string; data: string; sampleId: string }[] | undefined> {
     try {
-      const res = await axios.post<{ searchSamples: { distance: number; externalId: string; data: string }[] }>(
+        const res = await axios.post<{ searchSamples: { distance: number; externalId: string; data: string, sampleId: string }[] }>(
         props.urls.nyckel + '/v0.9/functions/sw3j7knfy7fqfko1/search?sampleCount=10&includeData=true',
           { data },
           {
@@ -102,6 +102,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       }
     }
   }
+
   async function createCard(data: string, externalId: string): Promise<any> {
     try {
       const res = await axios.post(
@@ -149,6 +150,29 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
     }
   }
 
+  async function deleteCardBySampleId(sampleId: string): Promise<void> {
+  try {
+    const response = await axios.delete(
+      `${props.urls.nyckel}/v1/functions/sw3j7knfy7fqfko1/samples/${sampleId}`,
+      {
+        headers: {
+          'Authorization': `${props.token.token_type} ${props.token.access_token}`,
+        },
+      }
+    )
+
+    console.log(`Status code: ${response.status}`);
+    console.log(`Card with sampleId: ${sampleId} has been deleted.`);
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Delete card by sampleId failed.', error);
+    } else {
+      console.error('Error deleting card by sampleId:', error);
+    }
+  }
+}
+
+
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = () => {
     const file = fileEl.current?.files?.[0];
     
@@ -179,7 +203,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   }
   const handleUpdateBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
     const coord = scaledCardCoords[selectedCardIndex];
-    await deleteCard(filteredSearchResults[0].externalId);
+    //await deleteCard(filteredSearchResults[0].externalId);
     const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
     const json = await createCard(dataUrl, (document.getElementById('update') as HTMLInputElement).value);
     const cards = await searchCard(json.data);
@@ -188,6 +212,18 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       setFilteredSearchResults(cards);
     }
   }
+  const handleDeleteBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
+      try {
+        // console.log(filteredSearchResults[0])
+        await deleteCardBySampleId(filteredSearchResults[0].sampleId);
+        // After deletion, reset the state
+        setSelectedCardIndex(-1);
+        setFilteredSearchResults([]);
+      } catch (error) {
+        console.error('Error deleting card:', error);
+      }
+  }
+
 
   return (
     <main>
@@ -218,6 +254,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
           <label htmlFor="update">Card No:</label>
           <input type="number" id="update" name="update" required />
           <button onClick={handleUpdateBtnClick}>Update</button>
+          <button onClick={handleDeleteBtnClick} style={{ marginLeft: '10px' }}>Delete</button>
         </div>
         <table>
           <thead>
