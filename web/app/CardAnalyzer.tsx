@@ -269,7 +269,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
               <tr key={result.externalId}>
                 <td>{result.distance}</td>
                 <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
-                <td><Image src={`https://salix5.github.io/query-data/pics/${(+result.externalId!).toString()}.jpg`} width={322} height={470} alt="actual" /></td>
+                <td><Image src={`https://salix5.github.io/query-data/pics/${(+result.externalId!).toString().split('-')[0]}.jpg`} width={322} height={470} alt="actual" /></td>
               </tr>
             )}
           </tbody>
