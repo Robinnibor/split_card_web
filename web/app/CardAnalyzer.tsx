@@ -14,6 +14,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   const [scaledCardCoords, setScaledCardCoords] = useState([]);
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1);
   const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string; data: string; sampleId: string }[]>([]);
+  const [searchCache, setSearchCache] = useState<{ [key: number]: { distance: number; externalId: string; data: string; sampleId: string }[] }>({});
 
   async function getCard(path: string): Promise<void> {
     try {
@@ -77,7 +78,13 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
     // Get the data URL of the cropped image
     return croppedCanvas.toDataURL();
   }
-  async function searchCard(data: string): Promise<{ distance: number; externalId: string; data: string; sampleId: string }[] | undefined> {
+  async function searchCard(index: number, useCache: boolean = true): Promise<{ distance: number; externalId: string; data: string; sampleId: string;  }[] | undefined> {
+    if(useCache && searchCache[index]) {
+      return searchCache[index];
+    }
+
+    const coord = scaledCardCoords[index];
+    const data = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
     try {
         const res = await axios.post<{ searchSamples: { distance: number; externalId: string; data: string, sampleId: string }[] }>(
         props.urls.nyckel + '/v0.9/functions/sw3j7knfy7fqfko1/search?sampleCount=10&includeData=true',
@@ -91,7 +98,9 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       )
       // TEST: see the most similar samples
       console.log('search results:', res.data.searchSamples);
-      const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.045);
+      const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.035);
+      const newCache = { ...searchCache, [index]: cards };
+      setSearchCache(newCache);
 
       return cards;
     } catch (error) {
@@ -103,7 +112,10 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
     }
   }
 
-  async function createCard(data: string, externalId: string): Promise<any> {
+  async function createCard(selectedCardIndex: number, externalId: string): Promise<any> {
+    const coord = scaledCardCoords[selectedCardIndex];
+    console.log("index = ", selectedCardIndex)
+    const data = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
     try {
       const res = await axios.post(
         props.urls.nyckel + '/v1/functions/sw3j7knfy7fqfko1/samples',
@@ -115,37 +127,18 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
             },
         }
       )
-
+      console.log(res.data)
       return res.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         // sample with the same externalId already exists
         if (error.response?.status === 409) {
-          await createCard(data, `${externalId}-${Math.floor(Date.now() / 1000)}`);
+          await createCard(selectedCardIndex, `${externalId}-${Math.floor(Date.now() / 1000)}`);
         } else {
           console.error('Create card failed.', error);
         }
       } else {
         console.error('Error creating card:', error);
-      }
-    }
-  }
-  async function deleteCard(externalId: string): Promise<void> {
-    try {
-      await axios.delete(
-        props.urls.nyckel + '/v1/functions/sw3j7knfy7fqfko1/samples?externalId=' +
-        externalId,
-        {
-          headers: {
-            'Authorization': `${props.token.token_type} ${props.token.access_token}`,
-          },
-        }
-      )
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error('Delete card failed.', error);
-      } else {
-        console.error('Error deleting card:', error);
       }
     }
   }
@@ -181,32 +174,26 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
     }
   }
   const handleMapClick: React.MouseEventHandler<HTMLMapElement> = async (e) => {
-    const coord = scaledCardCoords[+(e.target as HTMLAreaElement).dataset.index!];
-    const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
-    const cards = await searchCard(dataUrl);
-
     setSelectedCardIndex(+(e.target as HTMLAreaElement).dataset.index!);
+    const cards = await searchCard(+(e.target as HTMLAreaElement).dataset.index!);
 
     if (cards) {
       setFilteredSearchResults(cards);
     }
   }
+
   const handleCreateBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
-    const coord = scaledCardCoords[selectedCardIndex];
-    const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
-    const json = await createCard(dataUrl, (document.getElementById('create') as HTMLInputElement).value);
-    const cards = await searchCard(json.data);
+    const json = await createCard(selectedCardIndex, (document.getElementById('create') as HTMLInputElement).value);
+    const cards = await searchCard(selectedCardIndex, false);
 
     if (cards) {
       setFilteredSearchResults(cards);
     }
   }
+  // update is the same as create at the moment
   const handleUpdateBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
-    const coord = scaledCardCoords[selectedCardIndex];
-    //await deleteCard(filteredSearchResults[0].externalId);
-    const dataUrl = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
-    const json = await createCard(dataUrl, (document.getElementById('update') as HTMLInputElement).value);
-    const cards = await searchCard(json.data);
+    const json = await createCard(selectedCardIndex, (document.getElementById('update') as HTMLInputElement).value);
+    const cards = await searchCard(selectedCardIndex, false);
 
     if (cards) {
       setFilteredSearchResults(cards);
@@ -217,8 +204,13 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
         // console.log(filteredSearchResults[0])
         await deleteCardBySampleId(filteredSearchResults[0].sampleId);
         // After deletion, reset the state
-        setSelectedCardIndex(-1);
-        setFilteredSearchResults([]);
+        const cards = await searchCard(selectedCardIndex, false);
+
+        if (cards) {
+          setFilteredSearchResults(cards);
+        }
+        //setSelectedCardIndex(-1);
+        //setFilteredSearchResults([]);
       } catch (error) {
         console.error('Error deleting card:', error);
       }
@@ -267,7 +259,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
           <tbody>
             {filteredSearchResults.map((result) =>
               <tr key={result.externalId}>
-                <td>{result.distance}</td>
+                <td>{result.distance}<br/><br/>{result.externalId}</td>
                 <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
                 <td><Image src={`https://salix5.github.io/query-data/pics/${+result.externalId.split('-')[0]}.jpg`} width={322} height={470} alt="actual" /></td>
               </tr>
