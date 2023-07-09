@@ -254,9 +254,10 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       if (searchCache[+index] && searchCache[+index].length > 0) {
         const external = searchCache[+index][0]?.externalId;
 
-        if (external) {
-          externalId = external.split('-')[0];
+        if (external && external.trim() !== '') {
+            externalId = external.split('-')[0];
         }
+
       }
 
       return {
@@ -345,7 +346,18 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
                   <tr key={result.externalId}>
                     <td>{result.distance}<br/><br/>{result.externalId}</td>
                     <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
-                    <td><Image src={`https://salix5.github.io/query-data/pics/${+result.externalId.split('-')[0]}.jpg`} width={322} height={470} alt="actual" /></td>
+                    <td>
+                        {
+                            result.externalId && result.externalId.trim() !== ''
+                                ? <Image
+                                    src={`https://salix5.github.io/query-data/pics/${result.externalId.split('-')[0]}.jpg`}
+                                    width={322}
+                                    height={470}
+                                    alt="actual"
+                                  />
+                                : null
+                        }
+                    </td>
                   </tr>
                 )}
               </tbody>
