@@ -15,6 +15,24 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1);
   const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string; data: string; sampleId: string }[]>([]);
   const [searchCache, setSearchCache] = useState<{ [key: number]: { distance: number; externalId: string; data: string; sampleId: string }[] }>({});
+  // Add new state for the check status of each card
+    const [cardCheckStatus, setCardCheckStatus] = useState<string[]>([]);
+
+    const handleCheckBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
+      const newCardCheckStatus = [];
+
+      // Check each card
+      for (let i = 0; i < scaledCardCoords.length; i++) {
+        const cards = await searchCard(i, true);
+        if (cards?.length) {
+          newCardCheckStatus[i] = "white";
+          setCardCheckStatus(newCardCheckStatus);
+        } else {
+          newCardCheckStatus[i] = "red";
+          setCardCheckStatus(newCardCheckStatus);
+        }
+      }
+    };
 
   async function getCard(path: string): Promise<void> {
     try {
@@ -79,9 +97,12 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
     return croppedCanvas.toDataURL();
   }
   async function searchCard(index: number, useCache: boolean = true): Promise<{ distance: number; externalId: string; data: string; sampleId: string;  }[] | undefined> {
+    console.log('searc card index', index)
     if(useCache && searchCache[index]) {
+      console.log('search results:', searchCache[index]);
       return searchCache[index];
     }
+
 
     const coord = scaledCardCoords[index];
     const data = await cropImage({ x: coord[0], y: coord[1], w: coord[2], h: coord[3] }, imageEl.current!);
@@ -99,8 +120,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       // TEST: see the most similar samples
       console.log('search results:', res.data.searchSamples);
       const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.035);
-      const newCache = { ...searchCache, [index]: cards };
-      setSearchCache(newCache);
+      setSearchCache(prevSearchCache => ({...prevSearchCache, [index]: cards}));
 
       return cards;
     } catch (error) {
@@ -217,64 +237,136 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   }
 
 
+  const [exportJson, setExportJson] = useState<string>('');  // Add new state for the export JSON
+
+  const handleExportBtnClick: React.MouseEventHandler<HTMLButtonElement> = async () => {
+  let allCardsFound = true;
+  for (let i = 0; i < scaledCardCoords.length; i++) {
+    if (!searchCache[i]) {
+      allCardsFound = false;
+      break;
+    }
+  }
+
+  if (allCardsFound) {
+    const exportData = Object.keys(searchCache).map((index) => {
+      let externalId;
+      if (searchCache[+index] && searchCache[+index].length > 0) {
+        const external = searchCache[+index][0]?.externalId;
+
+        if (external) {
+          externalId = external.split('-')[0];
+        }
+      }
+
+      return {
+        order: +index,
+        originalPosition: originalCardCoords[+index],
+        externalId: externalId,
+      }
+    });
+
+    // Add the original image dimensions to the exportData
+    const exportDataWithDimensions = {
+      originalHeight: imageEl.current?.naturalHeight, // get original image height from the naturalHeight property
+      originalWidth: imageEl.current?.naturalWidth, // get original image width from the naturalWidth property
+      data: exportData,
+    };
+
+    const exportJsonStr = JSON.stringify(exportDataWithDimensions, null, 2);
+    setExportJson(exportJsonStr);
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(exportJsonStr).then(() => {
+      alert('Exported data copied to clipboard');
+    }, () => {
+      alert('Failed to copy exported data to clipboard');
+    });
+  } else {
+    alert("Not all cards have been found yet");
+  }
+};
+
+
+
+
+
+
   return (
-    <main>
-  {scaleFactor === 0 && <form method="post" encType="multipart/form-data">
-    <div>
-      <label htmlFor="file">Choose Image to upload</label>
-      <input ref={fileEl} type="file" id="file" name="file" accept="image/*" onChange={handleFileChange} />
+<main>
+  {scaleFactor === 0 && (
+    <form method="post" encType="multipart/form-data">
+      <div>
+        <label htmlFor="file">Choose Image to upload</label>
+        <input ref={fileEl} type="file" id="file" name="file" accept="image/*" onChange={handleFileChange} />
+      </div>
+    </form>
+  )}
+  {scaleFactor !== 0 && (
+    <div className="flex">
+      <div className="relative">
+        <map name="cards" onClick={handleMapClick}>
+          {originalCardCoords.map((coord, i) => (
+            <>
+              <area
+                key={i}
+                data-index={i}
+                shape="rect"
+                coords={`${coord[0]},${coord[1]},${coord[0] + coord[2]},${coord[1] + coord[3]}`}
+                href={`#${i}`}
+                alt="card"
+              />
+              <div className={`absolute border-4`} style={{ borderColor: cardCheckStatus[i], display: cardCheckStatus[i] ? 'block' : 'none', left: coord[0], top: coord[1], width: coord[2], height: coord[3],pointerEvents: 'none'  }} />
+            </>
+          ))}
+        </map>
+        <Image ref={imageEl} useMap="#cards" src={imageSrc} width={0} height={0} style={{ width: 'auto' }} alt="deck" />
+        <div className={`absolute border-2 border-[#00ff00]`} style={{ display: selectedCardIndex === -1 ? 'none' : 'block', left: originalCardCoords[selectedCardIndex]?.[0], top: originalCardCoords[selectedCardIndex]?.[1], width: originalCardCoords[0][2], height: originalCardCoords[0][3] }} />
+      </div>
+      <div> {/* This div is now a sibling of the above div */}
+        {filteredSearchResults.length !== 0 && (
+          <div>
+            <div>
+              <label htmlFor="update">Card No:</label>
+              <input type="number" id="update" name="update" required />
+              <button onClick={handleUpdateBtnClick}>Update</button>
+              <button onClick={handleDeleteBtnClick} style={{ marginLeft: '10px' }}>Delete</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Distance</th>
+                  <th>Data</th>
+                  <th>Actual</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSearchResults.map((result) =>
+                  <tr key={result.externalId}>
+                    <td>{result.distance}<br/><br/>{result.externalId}</td>
+                    <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
+                    <td><Image src={`https://salix5.github.io/query-data/pics/${+result.externalId.split('-')[0]}.jpg`} width={322} height={470} alt="actual" /></td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {filteredSearchResults.length === 0 && selectedCardIndex !== -1 && (
+          <div>
+            <label htmlFor="create">Card No:</label>
+            <input type="number" id="create" name="create" required />
+            <button onClick={handleCreateBtnClick}>Create</button>
+          </div>
+        )}
+      </div>
     </div>
-  </form>}
-  {scaleFactor !== 0 && <div className="flex"> {/* Add flex here */}
-    <div className="relative">
-      <map name="cards" onClick={handleMapClick}>
-        {originalCardCoords.map((coord, i) => <area
-          key={i}
-          data-index={i}
-          shape="rect"
-          coords={`${coord[0]},${coord[1]},${coord[0] + coord[2]},${coord[1] + coord[3]}`}
-          href={`#${i}`}
-          alt="card"
-        />)}
-      </map>
-      <Image ref={imageEl} useMap="#cards" src={imageSrc} width={0} height={0} style={{ width: 'auto' }} alt="deck" />
-      <div className={`absolute border-2 border-[#00ff00]`} style={{ display: selectedCardIndex === -1 ? 'none' : 'block', left: originalCardCoords[selectedCardIndex]?.[0], top: originalCardCoords[selectedCardIndex]?.[1], width: originalCardCoords[0][2], height: originalCardCoords[0][3] }} />
-    </div>
-    <div> {/* Move this div to be a sibling of the above div */}
-      {filteredSearchResults.length !== 0 && <div>
-        <div>
-          <label htmlFor="update">Card No:</label>
-          <input type="number" id="update" name="update" required />
-          <button onClick={handleUpdateBtnClick}>Update</button>
-          <button onClick={handleDeleteBtnClick} style={{ marginLeft: '10px' }}>Delete</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Distance</th>
-              <th>Data</th>
-              <th>Actual</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSearchResults.map((result) =>
-              <tr key={result.externalId}>
-                <td>{result.distance}<br/><br/>{result.externalId}</td>
-                <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
-                <td><Image src={`https://salix5.github.io/query-data/pics/${+result.externalId.split('-')[0]}.jpg`} width={322} height={470} alt="actual" /></td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>}
-      {filteredSearchResults.length === 0 && selectedCardIndex !== -1 && <div>
-        <label htmlFor="create">Card No:</label>
-        <input type="number" id="create" name="create" required />
-        <button onClick={handleCreateBtnClick}>Create</button>
-      </div>}
-    </div>
-  </div>}
+  )}
+  <button onClick={handleCheckBtnClick}>Check</button><br/><br/>
+  <button onClick={handleExportBtnClick}>Export</button>
+  {exportJson && <pre>{exportJson}</pre>}
 </main>
+
 
   )
 }
