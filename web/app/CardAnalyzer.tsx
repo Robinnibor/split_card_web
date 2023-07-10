@@ -13,6 +13,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   const [originalCardCoords, setOriginalCardCoords] = useState([]);
   const [scaledCardCoords, setScaledCardCoords] = useState([]);
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1);
+  const [notFound, setNotFound] = useState(false);
   const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string; data: string; sampleId: string }[]>([]);
   const [searchCache, setSearchCache] = useState<{ [key: number]: { distance: number; externalId: string; data: string; sampleId: string }[] }>({});
   // Add new state for the check status of each card
@@ -119,7 +120,14 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       )
       // TEST: see the most similar samples
       console.log('search results:', res.data.searchSamples);
-      const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.035);
+      let cards = res.data.searchSamples.filter((sample) => sample.distance < 0.035);
+
+      if (cards.length === 0) {
+        setNotFound(true);
+        cards = res.data.searchSamples.filter((sample) => sample.distance < 0.5).slice(0, 3);
+      } else {
+        setNotFound(false);
+      }
       setSearchCache(prevSearchCache => ({...prevSearchCache, [index]: cards}));
 
       return cards;
@@ -236,6 +244,9 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       }
   }
 
+  const handleExternalIdClick: React.MouseEventHandler<HTMLSpanElement> = (e) => {
+    (document.getElementById(notFound ? 'create' : 'update') as HTMLInputElement).value = e.currentTarget.dataset.externalId!.split('-')[0];
+  }
 
   const [exportJson, setExportJson] = useState<string>('');  // Add new state for the export JSON
 
@@ -327,12 +338,18 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       <div> {/* This div is now a sibling of the above div */}
         {filteredSearchResults.length !== 0 && (
           <div>
-            <div>
-              <label htmlFor="update">Card No:</label>
-              <input type="number" id="update" name="update" required />
-              <button onClick={handleUpdateBtnClick}>Update</button>
-              <button onClick={handleDeleteBtnClick} style={{ marginLeft: '10px' }}>Delete</button>
-            </div>
+            {notFound ? 
+              <div>
+                <label htmlFor="create">Card No:</label>
+                <input type="number" id="create" name="create" required />
+                <button onClick={handleCreateBtnClick}>Create</button>
+              </div> : <div>
+                <label htmlFor="update">Card No:</label>
+                <input type="number" id="update" name="update" required />
+                <button onClick={handleUpdateBtnClick}>Update</button>
+                <button onClick={handleDeleteBtnClick} style={{ marginLeft: '10px' }}>Delete</button>
+              </div>
+            }
             <table>
               <thead>
                 <tr>
@@ -344,7 +361,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
               <tbody>
                 {filteredSearchResults.map((result) =>
                   <tr key={result.externalId}>
-                    <td>{result.distance}<br/><br/>{result.externalId}</td>
+                    <td>{result.distance}<br/><br/><span data-externalId={result.externalId} onClick={handleExternalIdClick}>{result.externalId}</span></td>
                     <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
                     <td>
                         {
@@ -362,13 +379,6 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
                 )}
               </tbody>
             </table>
-          </div>
-        )}
-        {filteredSearchResults.length === 0 && selectedCardIndex !== -1 && (
-          <div>
-            <label htmlFor="create">Card No:</label>
-            <input type="number" id="create" name="create" required />
-            <button onClick={handleCreateBtnClick}>Create</button>
           </div>
         )}
       </div>
