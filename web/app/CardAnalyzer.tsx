@@ -245,7 +245,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   }
 
   const handleExternalIdClick: React.MouseEventHandler<HTMLSpanElement> = (e) => {
-    (document.getElementById(notFound ? 'create' : 'update') as HTMLInputElement).value = e.currentTarget.dataset.externalId!.split('-')[0];
+    (document.getElementById(notFound ? 'create' : 'update') as HTMLInputElement).value = (e.target as HTMLSpanElement).dataset.externalId!.split('-')[0];
   }
 
   const [exportJson, setExportJson] = useState<string>('');  // Add new state for the export JSON
