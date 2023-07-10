@@ -14,6 +14,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   const [scaledCardCoords, setScaledCardCoords] = useState([]);
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1);
   const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string; data: string; sampleId: string }[]>([]);
+  const [restSearchResults, setRestSearchResults] = useState<{ distance: number; externalId: string; data: string; sampleId: string }[]>([]);
   const [searchCache, setSearchCache] = useState<{ [key: number]: { distance: number; externalId: string; data: string; sampleId: string }[] }>({});
   // Add new state for the check status of each card
     const [cardCheckStatus, setCardCheckStatus] = useState<string[]>([]);
@@ -120,6 +121,11 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       // TEST: see the most similar samples
       console.log('search results:', res.data.searchSamples);
       const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.035);
+      setRestSearchResults(
+        res.data.searchSamples
+          .filter((sample) => sample.distance < 0.5 && sample.distance >= 0.035)
+          .slice(0, 3)
+      );
       setSearchCache(prevSearchCache => ({...prevSearchCache, [index]: cards}));
 
       return cards;
@@ -236,6 +242,9 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       }
   }
 
+  const handleExternalIdClick: (id: string) => React.MouseEventHandler<HTMLSpanElement> = (id) => () => {
+    (document.getElementById('create') as HTMLInputElement).value = id;
+  }
 
   const [exportJson, setExportJson] = useState<string>('');  // Add new state for the export JSON
 
@@ -366,9 +375,40 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
         )}
         {filteredSearchResults.length === 0 && selectedCardIndex !== -1 && (
           <div>
-            <label htmlFor="create">Card No:</label>
-            <input type="number" id="create" name="create" required />
-            <button onClick={handleCreateBtnClick}>Create</button>
+            <div>
+              <label htmlFor="create">Card No:</label>
+              <input type="number" id="create" name="create" required />
+              <button onClick={handleCreateBtnClick}>Create</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Distance</th>
+                  <th>Data</th>
+                  <th>Actual</th>
+                </tr>
+              </thead>
+              <tbody>
+                {restSearchResults.map((result) =>
+                  <tr key={result.externalId}>
+                    <td>{result.distance}<br/><br/><span className="text-red-600 cursor-pointer" onClick={handleExternalIdClick(result.externalId.split('-')[0])}>{result.externalId}</span></td>
+                    <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
+                    <td>
+                        {
+                            result.externalId && result.externalId.trim() !== ''
+                                ? <Image
+                                    src={`https://salix5.github.io/query-data/pics/${result.externalId.split('-')[0]}.jpg`}
+                                    width={322}
+                                    height={470}
+                                    alt="actual"
+                                  />
+                                : null
+                        }
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
