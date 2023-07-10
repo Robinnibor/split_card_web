@@ -361,7 +361,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
               <tbody>
                 {filteredSearchResults.map((result) =>
                   <tr key={result.externalId}>
-                    <td>{result.distance}<br/><br/><span onClick={handleExternalIdClick(result.externalId.split('-')[0])}>{result.externalId}</span></td>
+                    <td>{result.distance}<br/><br/><span className="text-red-600 cursor-pointer" onClick={handleExternalIdClick(result.externalId.split('-')[0])}>{result.externalId}</span></td>
                     <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
                     <td>
                         {
