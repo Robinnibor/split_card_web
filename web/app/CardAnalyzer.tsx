@@ -244,8 +244,8 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       }
   }
 
-  const handleExternalIdClick: React.MouseEventHandler<HTMLSpanElement> = (e) => {
-    (document.getElementById(notFound ? 'create' : 'update') as HTMLInputElement).value = (e.target as HTMLSpanElement).dataset.externalId!.split('-')[0];
+  const handleExternalIdClick: (id: string) => React.MouseEventHandler<HTMLSpanElement> = (id) => () => {
+    (document.getElementById(notFound ? 'create' : 'update') as HTMLInputElement).value = id;
   }
 
   const [exportJson, setExportJson] = useState<string>('');  // Add new state for the export JSON
@@ -361,7 +361,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
               <tbody>
                 {filteredSearchResults.map((result) =>
                   <tr key={result.externalId}>
-                    <td>{result.distance}<br/><br/><span data-externalId={result.externalId} onClick={handleExternalIdClick}>{result.externalId}</span></td>
+                    <td>{result.distance}<br/><br/><span onClick={handleExternalIdClick(result.externalId.split('-')[0])}>{result.externalId}</span></td>
                     <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
                     <td>
                         {
