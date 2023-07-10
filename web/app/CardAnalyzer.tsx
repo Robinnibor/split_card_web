@@ -13,7 +13,6 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
   const [originalCardCoords, setOriginalCardCoords] = useState([]);
   const [scaledCardCoords, setScaledCardCoords] = useState([]);
   const [selectedCardIndex, setSelectedCardIndex] = useState(-1);
-  const [notFound, setNotFound] = useState(false);
   const [filteredSearchResults, setFilteredSearchResults] = useState<{ distance: number; externalId: string; data: string; sampleId: string }[]>([]);
   const [searchCache, setSearchCache] = useState<{ [key: number]: { distance: number; externalId: string; data: string; sampleId: string }[] }>({});
   // Add new state for the check status of each card
@@ -120,14 +119,7 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       )
       // TEST: see the most similar samples
       console.log('search results:', res.data.searchSamples);
-      let cards = res.data.searchSamples.filter((sample) => sample.distance < 0.035);
-
-      if (cards.length === 0) {
-        setNotFound(true);
-        cards = res.data.searchSamples.filter((sample) => sample.distance < 0.5).slice(0, 3);
-      } else {
-        setNotFound(false);
-      }
+      const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.035);
       setSearchCache(prevSearchCache => ({...prevSearchCache, [index]: cards}));
 
       return cards;
@@ -244,9 +236,6 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       }
   }
 
-  const handleExternalIdClick: (id: string) => React.MouseEventHandler<HTMLSpanElement> = (id) => () => {
-    (document.getElementById(notFound ? 'create' : 'update') as HTMLInputElement).value = id;
-  }
 
   const [exportJson, setExportJson] = useState<string>('');  // Add new state for the export JSON
 
@@ -265,9 +254,10 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       if (searchCache[+index] && searchCache[+index].length > 0) {
         const external = searchCache[+index][0]?.externalId;
 
-        if (external) {
-          externalId = external.split('-')[0];
+        if (external && external.trim() !== '') {
+            externalId = external.split('-')[0];
         }
+
       }
 
       return {
@@ -337,18 +327,12 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
       <div> {/* This div is now a sibling of the above div */}
         {filteredSearchResults.length !== 0 && (
           <div>
-            {notFound ? 
-              <div>
-                <label htmlFor="create">Card No:</label>
-                <input type="number" id="create" name="create" required />
-                <button onClick={handleCreateBtnClick}>Create</button>
-              </div> : <div>
-                <label htmlFor="update">Card No:</label>
-                <input type="number" id="update" name="update" required />
-                <button onClick={handleUpdateBtnClick}>Update</button>
-                <button onClick={handleDeleteBtnClick} style={{ marginLeft: '10px' }}>Delete</button>
-              </div>
-            }
+            <div>
+              <label htmlFor="update">Card No:</label>
+              <input type="number" id="update" name="update" required />
+              <button onClick={handleUpdateBtnClick}>Update</button>
+              <button onClick={handleDeleteBtnClick} style={{ marginLeft: '10px' }}>Delete</button>
+            </div>
             <table>
               <thead>
                 <tr>
@@ -360,13 +344,31 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
               <tbody>
                 {filteredSearchResults.map((result) =>
                   <tr key={result.externalId}>
-                    <td>{result.distance}<br/><br/><span className="text-red-600 cursor-pointer" onClick={handleExternalIdClick(result.externalId.split('-')[0])}>{result.externalId}</span></td>
+                    <td>{result.distance}<br/><br/>{result.externalId}</td>
                     <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
-                    <td><Image src={`https://salix5.github.io/query-data/pics/${+result.externalId.split('-')[0]}.jpg`} width={322} height={470} alt="actual" /></td>
+                    <td>
+                        {
+                            result.externalId && result.externalId.trim() !== ''
+                                ? <Image
+                                    src={`https://salix5.github.io/query-data/pics/${result.externalId.split('-')[0]}.jpg`}
+                                    width={322}
+                                    height={470}
+                                    alt="actual"
+                                  />
+                                : null
+                        }
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+        {filteredSearchResults.length === 0 && selectedCardIndex !== -1 && (
+          <div>
+            <label htmlFor="create">Card No:</label>
+            <input type="number" id="create" name="create" required />
+            <button onClick={handleCreateBtnClick}>Create</button>
           </div>
         )}
       </div>
