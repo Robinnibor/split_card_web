@@ -119,14 +119,19 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
         }
       )
       // TEST: see the most similar samples
+
       console.log('search results:', res.data.searchSamples);
-      const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.035);
+      const cards = res.data.searchSamples.filter((sample) => sample.distance < 0.04);
       setRestSearchResults(
         res.data.searchSamples
-          .filter((sample) => sample.distance < 0.5 && sample.distance >= 0.035)
+          .filter((sample) => sample.distance < 0.1 && sample.distance >= 0.04)
           .slice(0, 3)
       );
-      setSearchCache(prevSearchCache => ({...prevSearchCache, [index]: cards}));
+      if (cards.length > 0){
+        setSearchCache(prevSearchCache => ({...prevSearchCache, [index]: cards}));
+      };
+
+
 
       return cards;
     } catch (error) {
