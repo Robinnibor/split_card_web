@@ -394,25 +394,39 @@ export default function CardAnalyzer(props: { token: NyckelToken, urls: { nyckel
                 </tr>
               </thead>
               <tbody>
-                {restSearchResults.map((result) =>
-                  <tr key={result.externalId}>
-                    <td>{result.distance}<br/><br/><span className="text-red-600 cursor-pointer" onClick={handleExternalIdClick(result.externalId.split('-')[0])}>{result.externalId}</span></td>
-                    <td><Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" /></td>
-                    <td>
-                        {
-                            result.externalId && result.externalId.trim() !== ''
-                                ? <Image
-                                    src={`https://salix5.github.io/query-data/pics/${result.externalId.split('-')[0]}.jpg`}
-                                    width={322}
-                                    height={470}
-                                    alt="actual"
-                                  />
-                                : null
-                        }
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+                      {restSearchResults.map((result) => {
+                        const externalId = result.externalId && result.externalId.trim() !== '' ? result.externalId.split('-')[0] : null;
+
+                        return (
+                          <tr key={result.externalId}>
+                            <td>
+                              {result.distance}
+                              <br />
+                              <br />
+                              {externalId && (
+                                <span className="text-red-600 cursor-pointer" onClick={handleExternalIdClick(externalId)}>
+                                  {result.externalId}
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <Image src={result.data} width={scaledCardCoords[0][2]} height={scaledCardCoords[0][3]} alt="data" />
+                            </td>
+                            <td>
+                              {externalId && (
+                                <Image
+                                  src={`https://salix5.github.io/query-data/pics/${externalId}.jpg`}
+                                  width={322}
+                                  height={470}
+                                  alt="actual"
+                                />
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+               </tbody>
+
             </table>
           </div>
         )}
